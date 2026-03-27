@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Gold Manager Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root { --gold: #d4af37; --gold-dark: #b8952e; }
+        body { background-color: #ffffff; color: #333; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+        .gold-text { color: var(--gold); }
+        .gold-bg { background-color: var(--gold); color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .card { background: #fff; border: 1px solid #f0f0f0; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        input, select { background: #fdfdfd !important; border: 1px solid #eee !important; border-radius: 12px !important; padding: 12px !important; color: #333; }
+        .nav-btn { color: #ccc; border-bottom: 2px solid transparent; padding: 10px; transition: 0.3s; }
+        .nav-btn.active { color: var(--gold); border-bottom: 2px solid var(--gold); font-weight: bold; }
+        .detail-box { background: #fff9e6; border-left: 3px solid var(--gold); }
+    </style>
+</head>
+<body class="min-h-screen pb-24">
+
+    <!-- NAVBAR -->
+    <nav class="bg-white/95 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100 p-2">
+        <div class="flex justify-between items-center max-w-md mx-auto">
+            <h1 class="font-serif text-xl font-bold gold-text uppercase tracking-tighter ml-2">Gold <span class="text-gray-300 tracking-tighter">Manager</span></h1>
+            <div class="flex gap-2">
+                <button onclick="switchTab('new')" id="btn-new" class="nav-btn active"><i class="fas fa-plus-circle text-xl"></i></button>
+                <button onclick="switchTab('list')" id="btn-list" class="nav-btn"><i class="fas fa-history text-xl"></i></button>
+                <button onclick="switchTab('master')" id="btn-master" class="nav-btn"><i class="fas fa-boxes text-xl"></i></button>
+                <button onclick="switchTab('stats')" id="btn-stats" class="nav-btn"><i class="fas fa-chart-pie text-xl"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="p-4 max-w-md mx-auto">
+        
+        <!-- SEZIONE 1: NUOVO ORDINE -->
+        <div id="tab-new" class="tab-content active">
+            <div class="card p-6 mb-6">
+                <label class="text-[10px] font-bold gold-text uppercase tracking-widest block mb-2 font-black">Cliente</label>
+                <input type="text" id="cust-name" placeholder="Nome cliente" class="w-full mb-5 outline-none font-bold">
+
+                <label class="text-[10px] font-bold gold-text uppercase tracking-widest block mb-2 font-black">Prodotto</label>
+                <select id="p-cat" onchange="updateOptions()" class="w-full mb-3 outline-none font-bold text-sm">
+                    <option value="">Seleziona prodotto...</option>
+                    <option value="Profumo">Profumo</option>
+                    <option value="Acqua profumata">Acqua profumata</option>
+                    <option value="Acqua Profumata Victoria">Acqua Profumata Victoria</option>
+                    <option value="Crema corpo">Crema corpo</option>
+                    <option value="Bagnoschiuma">Bagnoschiuma</option>
+                    <option value="Profumatore Ambiente">Profumatore Ambiente</option>
+                    <option value="Spray ambiente">Spray ambiente</option>
+                    <option value="ALTRO">-- AGGIUNGI ALTRO --</option>
+                </select>
+
+                <div id="custom-box" class="hidden mb-3 space-y-2">
+                    <input type="text" id="custom-name" placeholder="Nome prodotto libero" class="w-full">
+                    <input type="text" id="custom-ml" placeholder="ML (es. 250ml)" class="w-full">
+                </div>
+
+                <select id="p-ml" class="w-full mb-3 outline-none font-bold text-sm"></select>
+
+                <div class="grid grid-cols-2 gap-3 mb-5">
+                    <input type="text" id="p-code" placeholder="Codice" class="outline-none font-bold">
+                    <input type="number" id="p-price" placeholder="Prezzo €" class="outline-none font-bold">
+                </div>
+
+                <button onclick="addItem()" class="w-full gold-bg p-4 rounded-xl font-bold shadow-lg uppercase text-xs tracking-widest">+ Aggiungi al carrello</button>
+            </div>
+
+            <div id="preview-section" class="hidden">
+                <div id="summary-box" class="card p-5 mb-4 text-sm border-gold/20 shadow-xl"></div>
+                <div class="flex gap-2">
+                    <button onclick="save()" class="flex-1 bg-gray-900 text-white p-4 rounded-xl font-bold text-xs uppercase">Salva Ordine</button>
+                    <button onclick="wa()" class="bg-green-500 text-white p-4 rounded-xl"><i class="fab fa-whatsapp text-xl"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEZIONE 2: STORICO ORDINI (Dettagliato) -->
+        <div id="tab-list" class="tab-content">
+            <input type="text" id="search" oninput="renderHistory()" placeholder="Cerca cliente..." class="w-full p-4 rounded-xl mb-4 border-gray-100 shadow-sm outline-none">
+            <div id="history" class="space-y-4"></div>
+        </div>
+
+        <!-- SEZIONE 3: RIEPILOGO TOTALE (Lista della spesa) -->
+        <div id="tab-master" class="tab-content">
+            <div class="flex justify-between items-center mb-4 px-2">
+                <h2 class="gold-text font-black uppercase text-xs tracking-widest">Riepilogo Tutti Prodotti</h2>
+                <button onclick="downloadCSV()" class="bg-gray-800 text-white px-3 py-2 rounded-lg text-[10px] font-bold"><i class="fas fa-file-excel mr-1"></i> SCARICA</button>
+            </div>
+            <div id="master-list-content" class="space-y-4">
+                <!-- Caricato via JS -->
+            </div>
+        </div>
+
+        <!-- SEZIONE 4: STATS -->
+        <div id="tab-stats" class="tab-content">
+            <div class="card p-8 mb-4 text-center border-gold/10">
+                <p class="gold-text text-[10px] font-bold uppercase mb-1">Totale Incassato</p>
+                <h2 id="total-rev" class="text-4xl font-bold text-gray-800 tracking-tighter">€0.00</h2>
+            </div>
+            <div class="card p-4"><canvas id="chart"></canvas></div>
+        </div>
+    </main>
+
+    <script>
+        const catalog = {
+            "Profumo": ["10 ml", "15 ml", "30 ml", "50 ml", "100 ml", "200 ml"],
+            "Acqua profumata": ["100 ml", "200 ml"],
+            "Acqua Profumata Victoria": ["250 ml"],
+            "Crema corpo": ["200 ml", "500 ml"],
+            "Bagnoschiuma": ["200 ml", "500 ml"],
+            "Profumatore Ambiente": ["100 ml", "250 ml", "500 ml", "1L"],
+            "Spray ambiente": ["75 ml", "150 ml"]
+        };
+
+        let db = JSON.parse(localStorage.getItem('gold_pro_db')) || [];
+        let cart = [];
+
+        function updateOptions() {
+            const cat = document.getElementById('p-cat').value;
+            const mlSel = document.getElementById('p-ml');
+            const custom = document.getElementById('custom-box');
+            mlSel.innerHTML = '<option value="">Scegli Formato...</option>';
+            if(cat === "ALTRO") { custom.classList.remove('hidden'); mlSel.classList.add('hidden'); }
+            else {
+                custom.classList.add('hidden'); mlSel.classList.remove('hidden');
+                if(catalog[cat]) catalog[cat].forEach(m => mlSel.innerHTML += `<option value="${m}">${m}</option>`);
+            }
+        }
+
+        function switchTab(t) {
+            document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
+            document.getElementById('tab-' + t).classList.add('active');
+            document.getElementById('btn-' + t).classList.add('active');
+            if(t === 'list') renderHistory();
+            if(t === 'master') renderMasterList();
+            if(t === 'stats') renderStats();
+        }
+
+        function addItem() {
+            const cat = document.getElementById('p-cat').value;
+            let n = (cat === "ALTRO") ? document.getElementById('custom-name').value : cat;
+            let m = (cat === "ALTRO") ? document.getElementById('custom-ml').value : document.getElementById('p-ml').value;
+            let c = document.getElementById('p-code').value.trim();
+            let p = parseFloat(document.getElementById('p-price').value);
+            if(!n || !m || !p || !c) return alert("Compila tutti i dati (anche il codice)!");
+            cart.push({ n, m, c, p });
+            document.getElementById('p-code').value = '';
+            document.getElementById('p-price').value = '';
+            renderCart();
+        }
+
+        function renderCart() {
+            const sec = document.getElementById('preview-section');
+            const box = document.getElementById('summary-box');
+            if(cart.length === 0) return sec.classList.add('hidden');
+            sec.classList.remove('hidden');
+            let groups = {}, tot = 0;
+            cart.forEach(i => {
+                tot += i.p;
+                let key = `${i.n}|${i.m}|${i.c}`;
+                if(!groups[key]) groups[key] = { q: 0, v: 0 };
+                groups[key].q++; groups[key].v += i.p;
+            });
+            let h = '<h3 class="gold-text font-black text-center mb-4 border-b pb-2 uppercase text-xs tracking-widest">Anteprima</h3>';
+            for(let k in groups) {
+                let [n, m, c] = k.split('|');
+                h += `<div class="flex justify-between mb-2"><span><b>${groups[k].q}x</b> ${n} ${m}<br><small class="text-gray-400">Cod: ${c}</small></span><b class="gold-text">€${groups[k].v.toFixed(2)}</b></div>`;
+            }
+            h += `<div class="mt-4 pt-2 border-t flex justify-between font-bold text-lg"><span>TOTALE</span><span>€${tot.toFixed(2)}</span></div>`;
+            box.innerHTML = h;
+        }
+
+        function save() {
+            let cl = document.getElementById('cust-name').value;
+            if(!cl) return alert("Inserisci nome cliente!");
+            db.push({ id: Date.now(), d: new Date(), cl, items: [...cart], t: cart.reduce((s,i)=>s+i.p,0) });
+            localStorage.setItem('gold_pro_db', JSON.stringify(db));
+            cart = []; document.getElementById('cust-name').value = '';
+            renderCart(); alert("Ordine salvato!"); switchTab('list');
+        }
+
+        function renderHistory() {
+            const s = document.getElementById('search').value.toLowerCase();
+            const cont = document.getElementById('history');
+            cont.innerHTML = '';
+            db.filter(o => o.cl.toLowerCase().includes(s)).reverse().forEach(o => {
+                let detailsId = `details-${o.id}`;
+                cont.innerHTML += `
+                    <div class="card p-4 border-l-4 border-l-yellow-500 shadow-sm">
+                        <div class="flex justify-between items-center">
+                            <div><b class="text-gray-800">${o.cl}</b><br><small class="text-gray-400 uppercase font-black text-[9px]">${new Date(o.d).toLocaleDateString()}</small></div>
+                            <div class="text-right">
+                                <span class="gold-text font-black text-xl">€${o.t.toFixed(2)}</span><br>
+                                <div class="flex gap-3 mt-1">
+                                    <button onclick="toggleDetails('${detailsId}')" class="text-[9px] text-indigo-400 font-black uppercase">Vedi Dettaglio</button>
+                                    <button onclick="del(${o.id})" class="text-[9px] text-red-300 font-black uppercase">Elimina</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="${detailsId}" class="hidden mt-4 p-3 detail-box rounded-xl text-xs">
+                            ${o.items.map(i => `<div>• <b>${i.c}</b> - ${i.n} ${i.m} (€${i.p.toFixed(2)})</div>`).join('')}
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function toggleDetails(id) {
+            const el = document.getElementById(id);
+            el.classList.toggle('hidden');
+        }
+
+        function del(id) { if(confirm("Cancellare l'ordine definitivamente?")) { db = db.filter(x => x.id !== id); localStorage.setItem('gold_pro_db', JSON.stringify(db)); renderHistory(); } }
+
+        function renderMasterList() {
+            const cont = document.getElementById('master-list-content');
+            cont.innerHTML = '';
+            
+            if(db.length === 0) {
+                cont.innerHTML = '<p class="text-center text-gray-400 py-10">Nessun ordine presente.</p>';
+                return;
+            }
+
+            // Aggregazione globale
+            let master = {};
+            db.forEach(o => {
+                o.items.forEach(i => {
+                    if(!master[i.n]) master[i.n] = {};
+                    if(!master[i.n][i.m]) master[i.n][i.m] = {};
+                    if(!master[i.n][i.m][i.c]) master[i.n][i.m][i.c] = 0;
+                    master[i.n][i.m][i.c]++;
+                });
+            });
+
+            for(let type in master) {
+                let typeHtml = `<div class="card p-5 border-t-4 border-t-gold shadow-md">
+                    <h3 class="gold-text font-black uppercase text-xs mb-3 border-b border-gray-100 pb-2">${type}</h3>`;
+                for(let ml in master[type]) {
+                    typeHtml += `<div class="mb-4">
+                        <p class="text-[10px] text-gray-400 font-black uppercase tracking-tighter mb-1 ml-1">${ml}</p>
+                        <div class="space-y-1 ml-2">`;
+                    for(let code in master[type][ml]) {
+                        typeHtml += `<div class="flex justify-between text-sm bg-gray-50 p-2 rounded-lg">
+                            <span>Codice: <b class="gold-text">${code}</b></span>
+                            <span class="font-black">Qtà: ${master[type][ml][code]}</span>
+                        </div>`;
+                    }
+                    typeHtml += `</div></div>`;
+                }
+                typeHtml += `</div>`;
+                cont.innerHTML += typeHtml;
+            }
+        }
+
+        function downloadCSV() {
+            let csv = "TIPOLOGIA;ML;CODICE;QUANTITA\n";
+            let master = {};
+            db.forEach(o => o.items.forEach(i => {
+                if(!master[i.n]) master[i.n] = {};
+                if(!master[i.n][i.m]) master[i.n][i.m] = {};
+                master[i.n][i.m][i.c] = (master[i.n][i.m][i.c] || 0) + 1;
+            }));
+
+            for(let type in master) {
+                for(let ml in master[type]) {
+                    for(let code in master[type][ml]) {
+                        csv += `${type};${ml};${code};${master[type][ml][code]}\n`;
+                    }
+                }
+            }
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `riepilogo_ordini_${new Date().toLocaleDateString()}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function renderStats() {
+            const tot = db.reduce((s, o) => s + o.t, 0);
+            document.getElementById('total-rev').innerText = "€" + tot.toFixed(2);
+            let c = {}; db.forEach(o => o.items.forEach(i => c[i.n] = (c[i.n] || 0) + 1));
+            if(window.mC) window.mC.destroy();
+            window.mC = new Chart(document.getElementById('chart'), {
+                type: 'pie',
+                data: { labels: Object.keys(c), datasets: [{ data: Object.values(c), backgroundColor: ['#d4af37', '#333', '#eee', '#aa8a2e', '#c0c0c0'] }] },
+                options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 10, weight: 'bold' } } } } }
+            });
+        }
+
+        function wa() {
+            let t = document.getElementById('summary-box').innerText;
+            window.open("https://wa.me/?text=" + encodeURIComponent("DETTAGLIO ORDINE CLIENTE:\n" + t));
+        }
+    </script>
+</body>
+</html>
